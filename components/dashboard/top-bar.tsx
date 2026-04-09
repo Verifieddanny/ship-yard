@@ -1,18 +1,32 @@
 "use client"
 import { usePathname, useRouter } from 'next/navigation';
-import { Clock, ExternalLink, Menu, Plus, RotateCcw, Search } from 'lucide-react'
+import { Clock, ExternalLink, Loader2, Menu, Plus, RotateCcw, Search } from 'lucide-react'
+import { useProjectStore } from '@/store/use-project-store';
+import { statusColors } from '@/lib/status-color';
+import { useRebuild } from '@/hooks/use-projects';
 
 function TopBar({ setIsSidebarOpen }: { setIsSidebarOpen: (open: boolean) => void }) {
     const router = useRouter();
     const pathname = usePathname();
+    const { currentProject } = useProjectStore();
+    const rebuildMutation = useRebuild();
 
-    // Improved ID extraction to handle query params or nested routes
+    const latestBuild = currentProject?.builds?.[0]
+
     const pathParts = pathname.split("/");
     const paramsId = pathParts[pathParts.length - 1];
 
-    const navigateToNew = () => {
-        router.push('/dashboard/new');
+    const handleRebuild = async () => {
+        if (!latestBuild) return;
+
+        try {
+            await rebuildMutation.mutateAsync(latestBuild.id);
+            // After re-build starts, you'll eventually redirect to the build logs
+        } catch (err) {
+            console.error("Rebuild failed", err);
+        }
     };
+
 
     return (
         /* Changed h-16 to min-h-16 to allow vertical growth on mobile */
@@ -41,9 +55,9 @@ function TopBar({ setIsSidebarOpen }: { setIsSidebarOpen: (open: boolean) => voi
                     </div>
 
                     <div className="flex items-center gap-3 md:gap-6">
-                        <button onClick={navigateToNew} type='button' className="bg-brand cursor-pointer text-black font-bold p-2 md:px-4 md:py-1.5 rounded-md text-sm hover:opacity-90 transition-opacity flex items-center gap-2">
+                        <a href='/dashboard/new' type='button' className="bg-brand cursor-pointer text-black font-bold p-2 md:px-4 md:py-1.5 rounded-md text-sm hover:opacity-90 transition-opacity flex items-center gap-2">
                             <Plus size={16} /> <span className="hidden md:inline">New Project</span>
-                        </button>
+                        </a>
 
                         <div className="flex items-center gap-3">
                             <div className="text-right hidden sm:block">
@@ -76,9 +90,10 @@ function TopBar({ setIsSidebarOpen }: { setIsSidebarOpen: (open: boolean) => voi
                         <span className="text-xs md:text-sm font-mono text-white truncate max-w-20 sm:max-w-none">
                             #{paramsId}
                         </span>
-                        <span className="bg-emerald-500/10 text-emerald-400 text-[8px] md:text-[9px] font-mono px-2 py-0.5 rounded-full flex items-center gap-1.5 shrink-0 ml-1">
-                            <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
-                            PASSED
+                        <span className={`${statusColors[latestBuild?.status || 'queued']} text-[8px] md:text-[9px] font-mono px-2 py-0.5 rounded-full flex items-center gap-1.5 shrink-0 ml-1`}>
+                            <span className={`w-1 h-1 rounded-full ${latestBuild?.status === 'passed' ? 'bg-emerald-400' : 'bg-current'} animate-pulse`} />
+                            {latestBuild?.status?.toUpperCase() || 'IDLE'}
+
                         </span>
                     </div>
 
@@ -90,19 +105,28 @@ function TopBar({ setIsSidebarOpen }: { setIsSidebarOpen: (open: boolean) => voi
                         <div className="flex items-center gap-2">
                             <button
                                 type='button'
-                                className="bg-white/5 border border-white/10 text-white text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-md flex items-center gap-2 transition-colors whitespace-nowrap"
+                                onClick={handleRebuild}
+                                disabled={rebuildMutation.isPending || !latestBuild}
+                                className="bg-white/5 border border-white/10 text-white text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-md flex items-center gap-2 transition-colors whitespace-nowrap cursor-pointer disabled:opacity-50"
                             >
-                                <RotateCcw size={14} />
-                                <span className="hidden xs:inline">Rebuild</span>
+                                {rebuildMutation.isPending ? (
+                                    <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                    <RotateCcw size={14} />
+                                )}
+                                <span className="hidden xs:inline">
+                                    {rebuildMutation.isPending ? 'Queuing...' : 'Rebuild'}
+                                </span>
                             </button>
 
-                            <button
-                                type='button'
+                            <a
+                                href={currentProject?.productionUrl}
+                                target="_blank"
                                 className="bg-brand text-black text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-md flex items-center gap-2 transition-opacity whitespace-nowrap"
                             >
                                 <ExternalLink size={14} />
                                 <span><span className="hidden xs:inline">Visit </span>Prod</span>
-                            </button>
+                            </a>
                         </div>
                     </div>
                 </div>

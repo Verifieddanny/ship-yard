@@ -1,10 +1,41 @@
 "use client";
-import { useState } from 'react';
-import { Grid, List } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Grid, List, Loader2 } from 'lucide-react';
 import ProjectCard from '@/components/dashboard/components/project-card';
+import { Project, useProjects } from '@/hooks/use-projects';
+import { formatDistanceToNow } from 'date-fns';
+import { useProjectStore } from '@/store/use-project-store';
 
 export default function DashboardPage() {
+    const router = useRouter();
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const { setProjects, setCurrentProject } = useProjectStore();
+    const { data: projects, isLoading, error } = useProjects();
+
+    useEffect(() => {
+        if (projects) {
+            setProjects(projects);
+        }
+    }, [projects, setProjects]);
+
+    const handleProjectClick = (project: Project) => {
+        setCurrentProject(project);
+        router.push(`/dashboard/projects/${project.id}`);
+    };
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center h-64 space-y-4">
+                <Loader2 className="w-8 h-8 text-brand animate-spin" />
+                <p className="text-gray-500 font-mono text-xs">Fetching your workspace...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return <div className="text-red-400 p-8 border border-red-500/20 rounded-xl bg-red-500/5">Failed to load projects.</div>;
+    }
     return (
         <div className="space-y-8">
             <div className="flex items-end justify-between">
@@ -38,43 +69,34 @@ export default function DashboardPage() {
                     : "flex flex-col gap-4"
             }>
 
-                <ProjectCard
-                    viewMode={viewMode}
-                    name="nebula-api-v2"
-                    repo="pipelab/nebula-core"
-                    status="RUNNING"
-                    meta="Last deploy 12m ago by @alex_stack"
-                    progress={70}
-                />
-                <ProjectCard
-                    viewMode={viewMode}
-                    name="shuttle-auth-service"
-                    repo="pipelab/auth-go"
-                    status="FAILED"
-                    error="Build error in main.go:42"
-                    errorMessage="Error: expected 'package', found 'EOF'"
-                />
-                <ProjectCard
-                    viewMode={viewMode}
+                {projects?.map((project: Project) => {
+                    const latestBuild = project.builds?.[0];
+                    const status = latestBuild?.status || 'queued';
+                    const repoPath = project.repoUrl
+                        .replace('https://github.com/', '')
+                        .replace('.git', '');
+                    return (
+                        <div key={project.id} onClick={() => handleProjectClick(project)}>
 
-                    name="oceanic-dashboard-ui"
-                    repo="pipelab/ui-kit"
-                    status="PASSED"
-                    meta="Deployed 4h ago by @system"
-                    segments={[1, 1, 1, 1]}
-                />
-                <ProjectCard
-                    viewMode={viewMode}
+                            <ProjectCard
+                                key={project.id}
+                                viewMode={viewMode}
+                                name={project.name}
+                                repo={repoPath}
+                                status={status}
+                                meta={latestBuild?.deployment ? `Deployed ${formatDistanceToNow(new Date(latestBuild?.deployment?.createdAt))} ago` : 'Never deployed'}
 
-                    name="internal-tooling-sdk"
-                    repo="pipelab/sdk"
-                    status="QUEUED"
-                    emptyState="Waiting for available runner..."
-                />
+                                error={status === 'failed' ? 'Build Error' : undefined}
+                                errorMessage={latestBuild?.logs[0]?.log || 'No logs available.'}
+                                deployedUrl={project.productionUrl || ""}
+                            />
+                        </div>
+                    );
+                })}
 
 
 
-                {viewMode === 'grid' && (
+                {viewMode === 'grid' && projects && projects.length > 0 && (
                     <>
                         <div className="lg:col-span-2 bg-[#141414] border border-white/5 rounded-xl p-8 relative overflow-hidden flex justify-between">
                             <div className="relative z-10 space-y-6">
@@ -100,6 +122,12 @@ export default function DashboardPage() {
                             <div className="absolute right-0 bottom-0 opacity-20 w-1/2 h-full bg-linear-to-t from-brand/20 to-transparent pointer-events-none" />
                         </div>
                     </>
+                )}
+
+                {projects?.length === 0 && (
+                    <div className="col-span-full py-20 text-center border border-dashed border-white/10 rounded-2xl">
+                        <p className="text-gray-500">No projects found. Deploy your first one!</p>
+                    </div>
                 )}
 
 

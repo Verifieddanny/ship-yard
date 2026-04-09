@@ -2,28 +2,29 @@
 import { useState } from 'react';
 import BuildInput from './build-input'
 import { FolderOpen, Info, Plus, Settings2, Trash2 } from 'lucide-react'
+import { Repo } from '@/hooks/use-projects';
 
-interface EnvVar {
-    id: string;
-    key: string;
-    value: string;
+interface RightSectionProps {
+    selectedRepo: Repo | null;
+    config: any;
+    setConfig: (config: any) => void;
+    envVars: { id: string; key: string; value: string }[];
+    setEnvVars: (vars: any) => void;
 }
 
-function RightSection({ project, branch }: { project?: string; branch?: string }) {
-    const [envVars, setEnvVars] = useState<EnvVar[]>([
-        { id: crypto.randomUUID(), key: '', value: '' }
-    ]);
+function RightSection({ selectedRepo, config, setConfig, envVars, setEnvVars }: RightSectionProps) {
+
 
     const addVariable = () => {
         setEnvVars([...envVars, { id: crypto.randomUUID(), key: '', value: '' }]);
     };
 
     const removeVariable = (id: string) => {
-        setEnvVars(envVars.filter(v => v.id !== id));
+        setEnvVars(envVars.filter((v) => v.id !== id));
     };
 
     const updateVariable = (id: string, field: 'key' | 'value', newValue: string) => {
-        setEnvVars(envVars.map(v => v.id === id ? { ...v, [field]: newValue } : v));
+        setEnvVars(envVars.map((v) => v.id === id ? { ...v, [field]: newValue } : v));
     };
     return (
         <div className="bg-[#111] border border-white/5 rounded-2xl p-8 space-y-8 self-start sticky top-24">
@@ -37,10 +38,11 @@ function RightSection({ project, branch }: { project?: string; branch?: string }
                 <div className="space-y-2">
                     <label htmlFor="project-name" className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Project Name</label>
                     <input
+                        readOnly
                         id="project-name"
                         type="text"
-                        disabled
-                        value={project || ""}
+                        value={selectedRepo?.name || ""}
+                        placeholder="Select a repo..."
                         className="w-full bg-black border border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-brand/50"
                     />
                 </div>
@@ -51,7 +53,7 @@ function RightSection({ project, branch }: { project?: string; branch?: string }
                             id="production-branch"
                             type="text"
                             disabled
-                            value={branch || ""}
+                            value={selectedRepo?.branch || ""}
                             className="w-full bg-black border border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-brand/50"
                         />
                         <Settings2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
@@ -66,9 +68,22 @@ function RightSection({ project, branch }: { project?: string; branch?: string }
                 </div>
 
                 <div className="space-y-4">
-                    <BuildInput label="Install Command" value="npm install" />
-                    <BuildInput label="Build Command" value="npm run build" />
-                    <BuildInput label="Output Directory" value="dist" icon={<FolderOpen size={14} />} />
+                    <BuildInput
+                        label="Install Command"
+                        value={config.installCommand}
+                        onChange={(val) => setConfig({ ...config, installCommand: val })}
+                    />
+                    <BuildInput
+                        label="Build Command"
+                        value={config.buildCommand}
+                        onChange={(val) => setConfig({ ...config, buildCommand: val })}
+                    />
+                    <BuildInput
+                        label="Output Directory"
+                        value={config.outputDirectory}
+                        onChange={(val) => setConfig({ ...config, outputDirectory: val })}
+                        icon={<FolderOpen size={14} />}
+                    />
                 </div>
             </div>
 
@@ -105,16 +120,16 @@ function RightSection({ project, branch }: { project?: string; branch?: string }
                             />
                             <input
                                 placeholder="VALUE"
+                                type="password"
                                 value={v.value}
                                 onChange={(e) => updateVariable(v.id, 'value', e.target.value)}
                                 className="flex-1 bg-black border border-white/10 rounded-lg px-4 py-2 text-xs font-mono outline-none focus:border-brand/40 transition-colors"
                             />
                             <button
-                                title='trash'
+                                title='Delete variable'
                                 type='button'
                                 onClick={() => removeVariable(v.id)}
-                                className="p-2.5 text-gray-600 hover:text-red-400 border border-white/10 rounded-lg transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                                disabled={envVars.length === 0}
+                                className="p-2.5 text-gray-600 hover:text-red-400 border border-white/10 rounded-lg transition-colors cursor-pointer"
                             >
                                 <Trash2 size={16} />
                             </button>

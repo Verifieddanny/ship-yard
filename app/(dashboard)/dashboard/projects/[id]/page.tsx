@@ -1,18 +1,100 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-    GitBranch, Clock, ExternalLink, Play,
-    CheckCircle2, XCircle, MoreHorizontal, Globe,
-    Info, Bell, Trash2, Save
+    GitBranch, Clock, ExternalLink, MoreHorizontal, Globe,
+    Info
 } from 'lucide-react';
 import Image from 'next/image';
 import BuildRow from '@/components/dashboard/project/build-row';
-import ConfigInput from '@/components/dashboard/project/config-input';
 import UsageMetric from '@/components/dashboard/project/usage-metric';
 import NotificationItem from '@/components/dashboard/project/notification-item';
+import { useProjectStore } from '@/store/use-project-store';
+import { useParams } from 'next/navigation';
+import { differenceInMinutes, formatDistanceToNow } from 'date-fns';
+import DeploymentRow from '@/components/dashboard/project/deployment-row';
+import { statusColors } from '@/lib/status-color';
+import { Deployment, useProjects, useRollback } from '@/hooks/use-projects';
+import ProjectSettings from '@/components/dashboard/project/settings';
 
 export default function ProjectDetailPage() {
+    const { id } = useParams();
     const [activeTab, setActiveTab] = useState('Builds');
+    const { currentProject, setCurrentProject, setProjects } = useProjectStore();
+    const rollbackMutation = useRollback();
+    const { data: projects, isLoading } = useProjects();
+    const [newSecrets, setNewSecrets] = useState<{ key: string; value: string }[]>([]);
+
+
+    useEffect(() => {
+        if (projects && id) {
+            setProjects(projects);
+            const project = projects.find(p => p.id.toString() === id.toString());
+            if (project) {
+                setCurrentProject(project);
+            }
+        }
+    }, [projects, id, setProjects, setCurrentProject]);
+
+    if (isLoading && !currentProject) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+                <span className="ml-4 text-gray-500 font-mono">Syncing workspace...</span>
+            </div>
+        );
+    }
+
+    if (!currentProject) {
+        return <div className="p-20 text-center text-red-400">Project not found.</div>;
+    }
+
+    const builds = currentProject.builds || [];
+    const latestBuild = builds[0];
+
+    const deployments = builds
+        .filter(b => b.deployment)
+        .map(b => ({ ...b.deployment, commit: b.commit }));
+
+    const totalBuildMinutes = builds.reduce((acc, build) => {
+        if (build.startedAt && build.finishedAt) {
+            const start = new Date(build.startedAt);
+            const end = new Date(build.finishedAt);
+            const duration = differenceInMinutes(end, start);
+            return acc + Math.max(duration, 1);
+        }
+        return acc;
+    }, 0);
+
+    const buildLimit = 500;
+    const usagePercentage = Math.min((totalBuildMinutes / buildLimit) * 100, 100);
+
+    const handleRollback = async (currentId: number, prevId: number) => {
+        if (confirm("Are you sure you want to rollback to this version?")) {
+            try {
+                await rollbackMutation.mutateAsync({ latestDeploymentId: currentId, previousDeploymentId: prevId });
+                // Note: Eventually, you'll redirect to the new build/deployment page here
+            } catch (err) {
+                console.error("Rollback failed", err);
+            }
+        }
+    };
+
+
+    const addSecretField = () => {
+        setNewSecrets([...newSecrets, { key: '', value: '' }]);
+    };
+
+    const updateNewSecret = (index: number, field: 'key' | 'value', val: string) => {
+        const updated = [...newSecrets];
+        updated[index][field] = val;
+        setNewSecrets(updated);
+    };
+
+    const removeNewSecret = (index: number) => {
+        setNewSecrets(newSecrets.filter((_, i) => i !== index));
+    };
+
+
 
     return (
         <div className="max-w-7xl mx-auto space-y-8">
@@ -20,44 +102,45 @@ export default function ProjectDetailPage() {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div className="space-y-4">
                     <div className="flex items-center gap-3">
-                        <h1 className="text-4xl font-bold tracking-tight">Project-Nebula-API</h1>
-                        <span className="bg-emerald-500/10 text-emerald-400 text-[9px] font-mono px-2 py-0.5 rounded-full flex items-center gap-1.5">
-                            <span className="w-1 h-1 rounded-full bg-emerald-400" />
-                            HEALTHY
+                        <h1 className="text-4xl font-bold tracking-tight">{currentProject.name}</h1>
+                        <span className={`${statusColors[latestBuild?.status || 'queued']} text-[9px] font-mono px-2 py-0.5 rounded-full flex items-center gap-1.5`}>
+                            <span className={`w-1 h-1 rounded-full ${latestBuild?.status === 'passed' ? 'bg-emerald-400' : 'bg-current'}`} />
+                            {latestBuild?.status?.toUpperCase() || 'IDLE'}
                         </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-6 text-[11px] font-mono text-gray-500 tracking-widest">
-                        <a href="#" className="flex items-center gap-2 hover:text-white transition-colors">
-                            <Image src="/svg/github.svg" alt="GitHub" width={14} height={14} className="object-contain w-3.5 h-3.5" />
-                            github.com/pipelab/nebula-api
+                        <a href={currentProject.repoUrl} target="_blank" className="flex items-center gap-2 hover:text-white transition-colors">
+                            <Image src="/svg/github.svg" alt="GitHub" width={14} height={14} className="opacity-50" />
+                            {currentProject.repoUrl.replace('https://', '')}
                         </a>
                         <div className="flex items-center gap-2">
-                            <GitBranch size={14} className="text-brand" /> main
+                            <GitBranch size={14} className="text-brand" />{currentProject.branch}
                         </div>
-                        <div className="flex items-center gap-2">
-                            <Clock size={14} /> Last deploy 14m ago
-                        </div>
+                        {latestBuild && (
+                            <div className="flex items-center gap-2">
+                                <Clock size={14} />
+                                {latestBuild.finishedAt
+                                    ? `Last deploy ${formatDistanceToNow(new Date(latestBuild.finishedAt).toISOString())} ago`
+                                    : 'Build in progress...'}
+                            </div>
+                        )}
                     </div>
                 </div>
 
-            
+
             </div>
 
             {/* 2. Tabs Navigation */}
             <div className="flex border-b border-white/5 gap-8">
-                {['Builds', 'Deployments'].map((tab) => (
+                {['Builds', 'Deployments', 'Settings'].map((tab) => (
                     <button
+                        type='button'
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className={`
-              pb-4 text-xs font-bold transition-all relative
-              ${activeTab === tab ? 'text-white' : 'text-gray-500 hover:text-gray-300'}
-            `}
+                        className={`pb-4 text-xs font-bold cursor-pointer transition-all relative ${activeTab === tab ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
                     >
                         {tab}
-                        {activeTab === tab && (
-                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand" />
-                        )}
+                        {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand" />}
                     </button>
                 ))}
             </div>
@@ -65,126 +148,98 @@ export default function ProjectDetailPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Left Column: Main Content */}
                 <div className="lg:col-span-8 space-y-8">
-
-                    {/* Recent Builds Section */}
-                    <div className="bg-[#111] border border-white/5 rounded-2xl overflow-hidden">
-                        <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/2">
-                            <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Recent Builds</span>
-                            <MoreHorizontal size={16} className="text-gray-600" />
-                        </div>
-                        <div className="divide-y divide-white/5">
-                            <BuildRow status="Success" commit="feat: implement graphql resolver logic" id="a9c2f4e" time="3m 42s" color="text-emerald-400" />
-                            <BuildRow status="Success" commit="fix: circular dependency in auth module" id="7f2d1e0" time="4m 15s" color="text-emerald-400" />
-                            <BuildRow status="Failed" commit="chore: update devDependencies" id="4b1a2c3" time="22s" color="text-red-400" />
-                        </div>
-                    </div>
-
-                    {/* Configuration Section */}
-                    <div className="bg-[#111] border border-white/5 rounded-2xl p-8 space-y-8">
-                        <div className="space-y-2">
-                            <h3 className="text-xl font-bold">Build Configuration</h3>
-                            <p className="text-gray-500 text-sm">Configure how Shipyard builds and packages your application.</p>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <ConfigInput label="BUILD COMMAND" value="npm run build" />
-                            <ConfigInput label="OUTPUT DIRECTORY" value="dist/" />
-                        </div>
-
-                        <div className="space-y-4">
-                            <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Environment Variables</span>
-                            <div className="space-y-2">
-                                <div className="flex gap-2">
-                                    <input
-                                        className="flex-1 bg-black border border-white/10 rounded-lg px-4 py-2 text-xs font-mono text-gray-400"
-                                        value="DATABASE_URL"
-                                        readOnly
-                                        title="Environment variable name"
+                    {activeTab === 'Builds' && (
+                        <div className="bg-[#111] border border-white/5 rounded-2xl overflow-hidden">
+                            <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/1">
+                                <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Build History</span>
+                                <MoreHorizontal size={16} className="text-gray-600" />
+                            </div>
+                            <div className="divide-y divide-white/5">
+                                {builds.map((build) => (
+                                    <BuildRow
+                                        key={build.id}
+                                        status={build.status === 'passed' ? 'Success' : build.status === 'failed' ? 'Failed' : 'Running'}
+                                        commit={build.commit}
+                                        id={build.id.toString().substring(0, 7)}
+                                        time={build.finishedAt ? formatDistanceToNow(new Date(build.finishedAt).toISOString()) : 'Active'}
+                                        color={build.status === 'passed' ? 'text-emerald-400' : build.status === 'failed' ? 'text-red-400' : 'text-blue-400'}
                                     />
-                                    <input
-                                        className="flex-2 bg-black border border-white/10 rounded-lg px-4 py-2 text-xs font-mono"
-                                        value="••••••••••••••••••••"
-                                        readOnly
-                                        title="Environment variable value"
-                                    />
-                                    <button title='trash' type='button' className="p-2.5 text-gray-600 hover:text-red-400"><Trash2 size={16} /></button>
-                                </div>
-                                <div className="flex gap-2">
-                                    <input className="flex-1 bg-black border border-white/10 rounded-lg px-4 py-2 text-xs font-mono" placeholder="Key" />
-                                    <input className="flex-2 bg-black border border-white/10 rounded-lg px-4 py-2 text-xs font-mono" placeholder="Value" />
-                                    <button title='add' type='button' className="p-2.5 text-brand"><Plus size={16} /></button>
-                                </div>
+                                ))}
                             </div>
                         </div>
+                    )}
 
-                        <div className="flex justify-end pt-4">
-                            <button className="bg-white/10 hover:bg-white/20 text-white text-xs font-bold px-6 py-2.5 rounded-md flex items-center gap-2 transition-all">
-                                <Save size={14} /> Save Changes
-                            </button>
+                    {activeTab === 'Deployments' && (
+                        <div className="bg-[#111] border border-white/5 rounded-2xl overflow-hidden">
+                            <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/1">
+                                <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Active Deployments</span>
+                            </div>
+                            <div className="divide-y divide-white/5">
+                                {deployments.length > 0 ? deployments.map((deploy: Deployment & { commit: string }) => {
+                                    const liveDeployments = deployments.filter(d => d.status === "live");
+                                    const latestId = liveDeployments[0]?.id;
+                                    const prevId = liveDeployments[1]?.id;
+                                    return (
+                                        <DeploymentRow
+                                            key={deploy.id}
+                                            id={deploy.id}
+                                            status={deploy.status}
+                                            commit={deploy.commit}
+                                            date={formatDistanceToNow
+                                                (new Date(deploy.createdAt).toISOString())}
+                                            latest={deploy.id === latestId}
+                                            prevDeploymentId={deploy.id === latestId ? prevId : null}
+                                            onRollback={handleRollback}
+                                        />
+                                    )
+                                }) : (
+                                    <div className="p-12 text-center text-gray-600 text-xs font-mono">No active deployments found.</div>
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
-                    {/* Danger Zone */}
-                    <div className="space-y-4 pt-8">
-                        <div className="space-y-1">
-                            <h3 className="text-lg font-bold text-red-400">Danger Zone</h3>
-                            <p className="text-gray-500 text-sm">Irreversibly delete this project and all associated deployments, logs, and artifacts.</p>
-                        </div>
-                        <button className="border border-red-500/20 text-red-500 hover:bg-red-500/10 text-xs font-bold px-6 py-2.5 rounded-md transition-all">
-                            Delete Project
-                        </button>
-                    </div>
+                    {activeTab === 'Settings' && (
+                        <ProjectSettings currentProject={currentProject} addSecretField={addSecretField} newSecrets={newSecrets} updateNewSecret={updateNewSecret} removeNewSecret={removeNewSecret} setNewSecrets={setNewSecrets} />
+                    )}
                 </div>
 
-                {/* Right Column: Side Cards */}
                 <div className="lg:col-span-4 space-y-6">
-                    {/* Production URL Card */}
-                    <div className="bg-[#111] border border-white/5 rounded-2xl p-6 relative overflow-hidden">
-                        <div className="flex justify-between items-start mb-6">
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Production URL</p>
-                                <a href="#" className="text-lg font-bold hover:text-brand flex items-center gap-2 transition-colors">
-                                    nebula-api.pipelab.sh <ExternalLink size={14} />
-                                </a>
-                            </div>
-                            <div className="text-white/10"><Globe size={40} /></div>
+                    <div className="bg-[#111] border border-white/5 rounded-2xl p-6">
+                        <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-4">Production URL</p>
+                        {currentProject.productionUrl ? (
+                            <a href={currentProject.productionUrl} target="_blank" className="text-lg font-bold hover:text-brand flex items-center gap-2 transition-colors">
+                                {currentProject.productionUrl.replace('https://', '')} <ExternalLink size={14} />
+                            </a>
+                        ) : (
+                            <span className="text-gray-600 italic text-sm">No live URL</span>
+                        )}
+                        <div className="mt-6 flex items-center gap-4 text-[10px] font-mono text-gray-500 border-t border-white/5 pt-4">
+                            <span className="flex items-center gap-1.5"><Globe size={12} className="text-emerald-500" /> Edge Network</span>
                         </div>
-                        <div className="flex items-center gap-4 text-[10px] font-mono text-gray-500">
-                            <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-emerald-500" /> SSL Active</span>
-                            <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-emerald-500" /> Global Edge Network</span>
-                        </div>
-                        {/* Tiny Chart Placeholder */}
-                        <div className="h-20 w-full mt-6 bg-linear-to-t from-brand/5 to-transparent border-x border-t border-white/5 rounded-t-lg" />
                     </div>
 
-                    {/* Resource Usage Card */}
                     <div className="bg-[#111] border border-white/5 rounded-2xl p-6 space-y-6">
-                        <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Resources (30d)</p>
+                        <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Resources (Project Life)</p>
                         <div className="space-y-4">
-                            <UsageMetric label="Build Minutes" value="142 / 500" progress={30} />
-                            <UsageMetric label="Data Transfer" value="12.4 GB / 50 GB" progress={25} />
+                            <UsageMetric
+                                label="Total Build Time"
+                                value={`${totalBuildMinutes}m / ${buildLimit}m`}
+                                progress={usagePercentage}
+                            />
                         </div>
+
+                        <p className="text-[10px] text-gray-500 leading-relaxed italic">
+                            * Usage is calculated based on the difference between build start and finish timestamps.
+                        </p>
                     </div>
 
-                    {/* Notifications List */}
                     <div className="space-y-4">
-                        <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">System Notifications</p>
-                        <NotificationItem
-                            icon={<Info className="text-blue-400" size={14} />}
-                            text="Infrastructure upgrade scheduled for Saturday, 02:00 UTC. Expect minimal downtime."
-                        />
-                        <NotificationItem
-                            icon={<Bell className="text-amber-400" size={14} />}
-                            text="Collaborator @alex_dev has been invited to this project."
-                        />
+                        <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Notifications</p>
+                        <NotificationItem icon={<Info className="text-blue-400" size={14} />} text="Build logs now include detailed memory usage." />
                     </div>
                 </div>
             </div>
         </div>
     );
-}
-
-
-function Plus({ size }: { size: number }) {
-    return <Play size={size} className="-rotate-90" />; 
 }

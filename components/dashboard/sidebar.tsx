@@ -1,5 +1,5 @@
 "use client"
-import { BookOpen, HardDrive, Layers, LifeBuoy, Rocket, Settings, X } from "lucide-react"
+import {Layers, LifeBuoy, LogOut, Rocket, Settings, X } from "lucide-react"
 import SidebarLink from "./sidebar-link"
 import { usePathname } from "next/navigation"
 
@@ -32,7 +32,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
             </nav>
 
             <div className="pt-6 border-t border-white/5 space-y-4">
-                <SidebarLink icon={<BookOpen size={16} />} label="DOCUMENTATION" small />
+                <SidebarLink icon={<LogOut size={16} />} label="LOGOUT" small />
                 <SidebarLink icon={<LifeBuoy size={16} />} label="SUPPORT" small />
             </div>
         </aside>

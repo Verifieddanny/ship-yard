@@ -1,9 +1,29 @@
-import React from 'react'
+import React, { useMemo, useState } from 'react'
 import RepoItem from './repo-item'
 import OrgSelector from './organization-select'
 import { RefreshCw, Search } from 'lucide-react'
+import { Oragnization, Repo, useRepos } from '@/hooks/use-projects';
+import { formatDistanceToNow } from 'date-fns';
+import RepoSkeleton from './repo-skeleton';
 
-function LeftSection({ selectedRepo, setSelectedRepo }: { selectedRepo: { project: string; branch: string; }; setSelectedRepo: (repo: { project: string; branch: string; }) => void }) {
+function LeftSection({ selectedRepo, setSelectedRepo }: { selectedRepo: Repo | null; setSelectedRepo: (repo: Repo) => void }) {
+    const [selectedOrg, setSelectedOrg] = useState<Oragnization | null>(null);
+    const { data: repos, isLoading, isFetching, refetch } = useRepos(selectedOrg?.login);
+    const [searchTerm, setSearchTerm] = useState<string>("");
+
+    const filteredRepos = useMemo(() => {
+        if (!repos) return [];
+
+        const filtered = repos.filter(repo =>
+            repo.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        if (searchTerm.trim() === "") {
+            return filtered.slice(0, 5);
+        }
+
+        return filtered;
+    }, [repos, searchTerm]);
     return (
         <div className="space-y-8">
             <div>
@@ -13,13 +33,15 @@ function LeftSection({ selectedRepo, setSelectedRepo }: { selectedRepo: { projec
             </div>
 
             <div className="space-y-4">
-                <OrgSelector />
+                <OrgSelector selected={selectedOrg && selectedOrg} onSelect={setSelectedOrg} />
 
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
                     <input
                         type="text"
                         placeholder="Search repositories..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full bg-transparent border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-brand/50"
                     />
                 </div>
@@ -30,34 +52,28 @@ function LeftSection({ selectedRepo, setSelectedRepo }: { selectedRepo: { projec
                         <RefreshCw size={12} className="text-gray-500 cursor-pointer hover:rotate-180 transition-transform duration-500" />
                     </div>
 
-                    <RepoItem
-                        name="shipyard-core-engine"
-                        branch="main"
-                        time="Last commit 2h ago"
-                        selected={selectedRepo.project === 'shipyard-core-engine'}
-                        onClick={() => setSelectedRepo({ project: 'shipyard-core-engine', branch: 'main' })}
-                    />
-                    <RepoItem
-                        name="documentation-portal"
-                        branch="prod"
-                        time="Updated yesterday"
-                        selected={selectedRepo.project === 'documentation-portal'}
-                        onClick={() => setSelectedRepo({ project: 'documentation-portal', branch: 'prod' })}
-                    />
-                    <RepoItem
-                        name="auth-service-v3"
-                        branch="develop"
-                        time="Last commit 4d ago"
-                        selected={selectedRepo.project === 'auth-service-v3'}
-                        onClick={() => setSelectedRepo({ project: 'auth-service-v3', branch: 'develop' })}
-                    />
-                    <RepoItem
-                        name="analytics-worker"
-                        branch="master"
-                        time="Updated 2w ago"
-                        selected={selectedRepo.project === 'analytics-worker'}
-                        onClick={() => setSelectedRepo({ project: 'analytics-worker', branch: 'master' })}
-                    />
+                    {isLoading ? (
+                        <RepoSkeleton />
+                    ) : (
+                        <div className="space-y-2 animate-in fade-in duration-500">
+                            {filteredRepos?.map((repo) => (
+                                <RepoItem
+                                    key={repo.repoUrl}
+                                    name={repo.name}
+                                    branch={repo.branch}
+                                    time={`Updated ${formatDistanceToNow(new Date(repo.updatedAt))} ago`}
+                                    selected={selectedRepo?.repoUrl === repo.repoUrl}
+                                    onClick={() => setSelectedRepo(repo)}
+                                />
+                            ))}
+
+                            {filteredRepos.length === 0 && !isLoading && (
+                                <div className="p-8 text-center border border-dashed border-white/5 rounded-xl">
+                                    <p className="text-xs text-gray-600 font-mono">No repositories found for this search.</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

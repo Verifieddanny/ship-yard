@@ -20,6 +20,11 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         };
     }, [isOpen]);
 
+    const handleGithubLogin = () => {
+        const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+        window.location.href = `${backendUrl}/auth/github`;
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -48,6 +53,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
                     <button
                         type="button"
+                        onClick={handleGithubLogin}
                         className="w-full flex items-center justify-center gap-3 bg-white text-black font-bold py-4 px-6 rounded-xl transition-all hover:bg-gray-200 active:scale-[0.98] cursor-pointer"
                     >
                         <Image src="/svg/github-icon.svg" alt="GitHub Logo" width={20} height={20} className='w-5 h-5' />
