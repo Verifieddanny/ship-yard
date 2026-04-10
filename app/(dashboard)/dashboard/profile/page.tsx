@@ -34,7 +34,7 @@ export default function SettingsPage() {
                             <h2 className="text-2xl font-bold text-white">{user?.username}</h2>
                         </div>
 
-                        <div className="w-full pt-6 border-t border-white/5 space-y-4">
+                        {/* <div className="w-full pt-6 border-t border-white/5 space-y-4">
                             <div className="flex justify-between text-[10px] font-mono uppercase tracking-widest">
                                 <span className="text-gray-500">Member Since</span>
                                 <span className="text-white">
@@ -45,7 +45,7 @@ export default function SettingsPage() {
                                 </span>
                             </div>
 
-                        </div>
+                        </div> */}
                     </div>
                 </div>
 
