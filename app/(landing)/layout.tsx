@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "../globals.css";
 import Footer from "@/components/footer";
+import Script from "next/script";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -43,7 +44,7 @@ export const metadata: Metadata = {
     siteName: "Shipyard",
     images: [
       {
-        url: "/og-image.jpg", 
+        url: "/og-image.jpg",
         width: 1200,
         height: 630,
         alt: "Shipyard Preview",
@@ -56,13 +57,13 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Shipyard | CI/CD Engine",
     description: "From Git Push to Subdomain in seconds. Watch your builds live.",
-    creator: "@dannyclassi_c", 
+    creator: "@dannyclassi_c",
     images: ["/og-image.jpg"],
   },
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",
-    apple: "/apple-touch-icon.png", 
+    apple: "/apple-touch-icon.png",
   },
   robots: {
     index: true,
@@ -90,6 +91,12 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         {children}
         <Footer />
+
+        <Script
+          defer
+          src="https://analytics.useshipyard.xyz/script.js"
+          data-website-id={process.env.NEXT_PUBLIC_WEBSITE_ID!}
+        />
       </body>
     </html>
   );
