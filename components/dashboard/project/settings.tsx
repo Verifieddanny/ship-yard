@@ -90,7 +90,7 @@ function ProjectSettings({ currentProject, addSecretField, newSecrets, updateNew
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                    <label htmlFor="name" className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">BUILD COMMAND</label>
+                    <label htmlFor="name" className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">PROJECT NAME</label>
                     <input
                         id="name"
                         className="w-full bg-black border border-white/10 rounded-lg px-4 py-2.5 text-sm font-mono text-gray-300 outline-none focus:border-brand/40"
@@ -99,7 +99,7 @@ function ProjectSettings({ currentProject, addSecretField, newSecrets, updateNew
                     />
                 </div>
                 <div className="space-y-2">
-                    <label htmlFor="branch" className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">OUTPUT DIRECTORY</label>
+                    <label htmlFor="branch" className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">BRANCH</label>
                     <input
                         id="branch"
                         className="w-full bg-black border border-white/10 rounded-lg px-4 py-2.5 text-sm font-mono text-gray-300 outline-none focus:border-brand/40"
