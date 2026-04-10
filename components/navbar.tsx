@@ -1,5 +1,3 @@
-import AuthModal from "./auth/auth-modal";
-
 interface NavbarProps {
     onOpenAuth: () => void;
 }

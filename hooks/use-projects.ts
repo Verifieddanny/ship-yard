@@ -30,12 +30,13 @@ interface Build {
   status: "queued" | "running" | "passed" | "failed";
   commit: string;
   commitAuthor: string;
+  commitHash: string;
   exitCode: number | null;
   projectId: number;
   startedAt: Date;
   finishedAt: Date | null;
   deployment: Deployment;
-  logs: Logs[];
+  logs?: Logs[];
 }
 
 export interface Project {
@@ -69,6 +70,17 @@ export interface Repo {
   updatedAt: string;
 }
 
+interface ProjectUpdate {
+  buildCommand?: string;
+  installCommand?: string;
+  outputDirectory?: string
+  secrets?: {
+    key: string;
+    value: string;
+  }[]
+}
+
+
 export const useProjects = () => {
   return useQuery({
     queryKey: ["projects"],
@@ -84,9 +96,12 @@ export const useUpdateProject = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+    mutationFn: async ({ id, data }: { id: number; data: ProjectUpdate }) => {
       const response = await api.put(`/project/projects/${id}`, data);
-      return response.data;
+      return response.data as {
+        message: string,
+        project: Project,
+      };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -100,7 +115,7 @@ export const useDeleteSecret = () => {
   return useMutation({
     mutationFn: async (secretId: number) => {
       const response = await api.delete(`/project/secret/${secretId}`);
-      return response.data;
+      return response.data.message as string;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -114,7 +129,7 @@ export const useRollback = () => {
   return useMutation({
     mutationFn: async (data: { latestDeploymentId: number, previousDeploymentId: number }) => {
       const response = await api.put(`/deploy/rollback?latest=${data.latestDeploymentId}&prev=${data.previousDeploymentId}`);
-      return response.data;
+      return response.data.build as Build;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -128,7 +143,7 @@ export const useRebuild = () => {
   return useMutation({
     mutationFn: async (buildId: number) => {
       const response = await api.post(`/build/rebuild/${buildId}`);
-      return response.data;
+      return response.data.build as Build;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -163,7 +178,21 @@ export const useCreateProject = () => {
   return useMutation({
     mutationFn: async (data: any) => {
       const response = await api.post("/project", data);
-      return response.data.project as Project;
+      return response.data as { message: string; project: Project, initialBuildId: number };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+};
+
+export const useDeleteProject = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (projectId: number) => {
+      const response = await api.delete(`/project/projects/${projectId}`);
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });

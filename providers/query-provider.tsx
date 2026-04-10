@@ -22,20 +22,3 @@ export default function QueryProvider({ children }: { children: React.ReactNode 
         </QueryClientProvider>
     );
 }
-
-/**
- * import { useQueryClient } from "@tanstack/react-query";
-import { socket } from "@/lib/socket";
-
-// Inside a component wrapped by the provider:
-const queryClient = useQueryClient();
-
-useEffect(() => {
-  socket.on("build_finished", (data) => {
-    // This tells React Query to immediately re-fetch the project list
-    queryClient.invalidateQueries({ queryKey: ["projects"] });
-  });
-
-  return () => socket.off("build_finished");
-}, [queryClient]);
- */

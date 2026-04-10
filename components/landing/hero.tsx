@@ -32,7 +32,6 @@ export default function Hero({ onOpenAuth }: HeroProps) {
           </div>
         </div>
 
-        {/* Right Terminal Mockup */}
         <div className="relative group">
           <div className="absolute -inset-4 bg-brand/20 blur-3xl rounded-xl opacity-80 group-hover:opacity-100 transition-opacity"></div>
 
@@ -78,7 +77,7 @@ export default function Hero({ onOpenAuth }: HeroProps) {
 
               <div className="flex items-center gap-2 pt-2 border-t border-white/5">
                 <span className="text-gray-500">public</span>
-                <span>Live at: <span className="underline text-brand cursor-pointer">shipyard.app/project-alpha</span></span>
+                <span>Live at: <span className="underline text-brand cursor-pointer">http://useshipyard.xyz</span></span>
               </div>
             </div>
           </div>

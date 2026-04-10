@@ -13,9 +13,10 @@ export default function AuthCallbackPage() {
         const username = searchParams.get('username');
         const avatar = searchParams.get('avatar');
         const email = searchParams.get('email');
+        const createdAt = searchParams.get('createdAt');
 
         if (token && username) {
-            setAuth(token, { username, avatar: avatar || '', email: email || '' });
+            setAuth(token, { username, avatar: avatar || '', email: email || '', createdAt: createdAt || "" });
             router.push('/dashboard');
         }
     }, [searchParams, setAuth, router]);

@@ -33,17 +33,18 @@ export default function NewProjectPage() {
                 .filter(ev => ev.key.trim() !== '' && ev.value.trim() !== '')
                 .map(({ key, value }) => ({ key, value }));
 
-            const project = await createProjectMutation.mutateAsync({
+            const projectResponse = await createProjectMutation.mutateAsync({
                 name: selectedRepo.name,
                 branch: selectedRepo.branch,
                 repoUrl: selectedRepo.repoUrl,
                 installCommand: config.installCommand,
                 buildCommand: config.buildCommand,
                 outputDirectory: config.outputDirectory,
-                secrets: secretsForBackend 
+                secrets: secretsForBackend
             });
-
-            router.push(`/dashboard/projects/${project.id}`);
+            if (projectResponse.initialBuildId) {
+                router.push(`/dashboard/deployments/${projectResponse.initialBuildId}`);
+            }
         } catch (err: any) {
             alert(err.response?.data?.message || "Deployment failed");
         }
@@ -53,11 +54,11 @@ export default function NewProjectPage() {
     return (
         <div className="max-w-6xl mx-auto pb-32">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                <LeftSection 
-                    selectedRepo={selectedRepo} 
-                    setSelectedRepo={setSelectedRepo} 
+                <LeftSection
+                    selectedRepo={selectedRepo}
+                    setSelectedRepo={setSelectedRepo}
                 />
-                <RightSection 
+                <RightSection
                     selectedRepo={selectedRepo}
                     config={config}
                     setConfig={setConfig}
@@ -65,9 +66,9 @@ export default function NewProjectPage() {
                     setEnvVars={setEnvVars}
                 />
             </div>
-            <DeploymentBar 
-                deploy={handleDeploy} 
-                isPending={createProjectMutation.isPending} 
+            <DeploymentBar
+                deploy={handleDeploy}
+                isPending={createProjectMutation.isPending}
             />
         </div>
     );

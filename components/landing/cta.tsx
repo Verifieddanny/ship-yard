@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function CTA() {
   return (
     <section className="py-32 bg-background relative">

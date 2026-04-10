@@ -1,4 +1,3 @@
-import React from 'react';
 import { Sparkles, Terminal, Lock, Globe, Cloud } from 'lucide-react';
 
 export default function Features() {

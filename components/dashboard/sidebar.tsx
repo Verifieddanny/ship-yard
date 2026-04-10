@@ -1,6 +1,6 @@
 "use client"
-import {Layers, LifeBuoy, LogOut, Rocket, Settings, X } from "lucide-react"
-import SidebarLink from "./sidebar-link"
+import {LifeBuoy,  Rocket,  User2, X } from "lucide-react"
+import SidebarLink, { Logout } from "./sidebar-link"
 import { usePathname } from "next/navigation"
 
 function Sidebar({ onClose }: { onClose?: () => void }) {
@@ -27,12 +27,11 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
                     pathname === "/dashboard/new" ||
                     /^\/dashboard\/projects\/[^/]+$/.test(pathname)
                 } />
-                <SidebarLink icon={<Layers size={18} />} label="DEPLOYMENTS" active={pathname === "/dashboard/deployments" || /^\/dashboard\/deployments\/[^/]+$/.test(pathname)} />
-                <SidebarLink icon={<Settings size={18} />} label="SETTINGS" active={pathname === "/dashboard/settings"} />
+                <SidebarLink icon={<User2 size={18} />} label="PROFILE" active={pathname === "/dashboard/profile"} />
             </nav>
 
             <div className="pt-6 border-t border-white/5 space-y-4">
-                <SidebarLink icon={<LogOut size={16} />} label="LOGOUT" small />
+                <Logout />
                 <SidebarLink icon={<LifeBuoy size={16} />} label="SUPPORT" small />
             </div>
         </aside>

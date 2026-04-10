@@ -1,8 +1,24 @@
 import { CheckCircle2, XCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
 
-function BuildRow({ status, commit, id, time, color }: { status: string; commit: string; id: string; time: string; color: string }) {
+function BuildRow({ status, commit, id, time, color, buildId }: {
+    status: string;
+    commit: string;
+    id: string;
+    time: string;
+    color: string;
+    buildId: number;
+}) {
+    const router = useRouter();
+    const isRunning = status === 'Running';
+
+    const handleClick = () => {
+        if (isRunning) {
+            router.push(`/dashboard/deployments/${buildId}`);
+        }
+    };
     return (
-        <div className="px-6 py-5 flex items-center justify-between hover:bg-white/2 transition-colors group">
+        <div onClick={handleClick} className="px-6 py-5 flex items-center justify-between hover:bg-white/2 transition-colors group">
             <div className="flex items-center gap-12 flex-1">
                 <div className={`flex items-center gap-2 text-xs font-bold w-24 ${color}`}>
                     {status === 'Success' ? <CheckCircle2 size={16} /> : <XCircle size={16} />}

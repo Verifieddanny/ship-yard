@@ -1,5 +1,5 @@
 import { statusColors } from "@/lib/status-color";
-import { MessageCircleWarningIcon, ExternalLink, Activity, Zap } from "lucide-react";
+import { MessageCircleWarningIcon, ExternalLink, Activity } from "lucide-react";
 
 function ProjectCard({ name, repo, status, meta, progress, error, errorMessage, deployedUrl, viewMode }: { name: string; repo: string; status: string; meta?: string; progress?: string; error: string | undefined; errorMessage: string; deployedUrl: string; viewMode: string }) {
 
@@ -12,7 +12,7 @@ function ProjectCard({ name, repo, status, meta, progress, error, errorMessage, 
             bg-[#141414] border cursor-pointer border-white/5 rounded-xl p-6 hover:border-white/10 transition-all
             ${isList ? 'flex items-center justify-between space-y-0 gap-6' : 'space-y-6 flex-col'}
         `}>
-            <div className={`flex ${isList ? 'flex-row items-center gap-8 flex-1' : 'flex-col'}`}>
+            <div className={`flex ${isList ? 'flex-row items-center justify-between gap-8 flex-1' : 'flex-col'}`}>
                 <div className="min-w-50">
                     <h4 className="font-bold text-lg">{name}</h4>
                     <p className="text-[11px] text-gray-500 font-mono truncate max-w-50">
@@ -24,7 +24,7 @@ function ProjectCard({ name, repo, status, meta, progress, error, errorMessage, 
                     ● {status}
                 </span>
 
-                {isList && meta && <p className="text-[10px] text-gray-500 flex-1">{meta}</p>}
+                {isList && meta && <p className="text-[10px] text-gray-500">{meta}</p>}
             </div>
 
             <div className={`${isList ? 'w-64' : 'w-full'}`}>

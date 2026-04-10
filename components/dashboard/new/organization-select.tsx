@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { ChevronDown, Check } from 'lucide-react';
 import { Oragnization, useOrganizations } from '@/hooks/use-projects';

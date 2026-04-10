@@ -1,8 +1,21 @@
-function LogLine({ line, type, text, className = "" }: any) {
-    const typeColors: any = {
+function LogLine({ line, type, text, className = "" }: { line: string; type: "info" | "success" | "error" | undefined; text: string; className?: string }) {
+    const typeColors: Record<string, string> = {
         info: 'text-blue-400',
         success: 'text-emerald-400',
         error: 'text-red-400',
+    };
+
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+    const formatText = (content: string) => {
+        const parts = content.split(urlRegex);
+        return parts.map((part, i) =>
+            urlRegex.test(part) ? (
+                <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-brand underline hover:text-white transition-colors">
+                    {part}
+                </a>
+            ) : part
+        );
     };
 
     return (
@@ -16,7 +29,7 @@ function LogLine({ line, type, text, className = "" }: any) {
                         [{type}]
                     </span>
                 )}
-                <span className={`text-gray-300 break-all ${className}`}>{text}</span>
+                <span className={`text-gray-300 break-all ${className}`}>{formatText(text)}</span>
             </div>
         </div>
     );

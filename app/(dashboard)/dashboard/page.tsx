@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Grid, List, Loader2 } from 'lucide-react';
 import ProjectCard from '@/components/dashboard/components/project-card';
@@ -10,7 +10,7 @@ import { useProjectStore } from '@/store/use-project-store';
 export default function DashboardPage() {
     const router = useRouter();
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-    const { setProjects, setCurrentProject } = useProjectStore();
+    const { setProjects, setCurrentProject, searchTerm } = useProjectStore();
     const { data: projects, isLoading, error } = useProjects();
 
     useEffect(() => {
@@ -23,6 +23,20 @@ export default function DashboardPage() {
         setCurrentProject(project);
         router.push(`/dashboard/projects/${project.id}`);
     };
+
+    const filteredProjects = useMemo(() => {
+        if (!projects) return [];
+        return projects.filter(project =>
+            project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            project.repoUrl.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [projects, searchTerm]);
+
+    useEffect(() => {
+        if (projects) {
+            setProjects(projects);
+        }
+    }, [projects, setProjects]);
 
     if (isLoading) {
         return (
@@ -69,7 +83,7 @@ export default function DashboardPage() {
                     : "flex flex-col gap-4"
             }>
 
-                {projects?.map((project: Project) => {
+                {filteredProjects.map((project: Project) => {
                     const latestBuild = project.builds?.[0];
                     const status = latestBuild?.status || 'queued';
                     const repoPath = project.repoUrl
@@ -87,49 +101,22 @@ export default function DashboardPage() {
                                 meta={latestBuild?.deployment ? `Deployed ${formatDistanceToNow(new Date(latestBuild?.deployment?.createdAt))} ago` : 'Never deployed'}
 
                                 error={status === 'failed' ? 'Build Error' : undefined}
-                                errorMessage={latestBuild?.logs[0]?.log || 'No logs available.'}
+                                errorMessage={latestBuild?.logs?.[0]?.log || 'No logs available.'}
                                 deployedUrl={project.productionUrl || ""}
                             />
                         </div>
                     );
                 })}
 
-
-
-                {viewMode === 'grid' && projects && projects.length > 0 && (
-                    <>
-                        <div className="lg:col-span-2 bg-[#141414] border border-white/5 rounded-xl p-8 relative overflow-hidden flex justify-between">
-                            <div className="relative z-10 space-y-6">
-                                <div>
-                                    <p className="text-[10px] font-mono text-brand uppercase tracking-widest mb-2">Quick Insight</p>
-                                    <h3 className="text-2xl font-bold">Build Health: 94.2%</h3>
-                                    <p className="text-gray-400 text-sm max-w-sm mt-2">
-                                        Your deployment stability has increased by 12% since the last sprint cycle.
-                                        High velocity maintained across 14 services.
-                                    </p>
-                                </div>
-                                <div className="flex gap-4">
-                                    <div className="bg-black/40 border border-white/5 p-4 rounded-lg w-32">
-                                        <p className="text-[9px] text-gray-500 font-mono uppercase">Weekly Deploys</p>
-                                        <p className="text-xl font-bold">128</p>
-                                    </div>
-                                    <div className="bg-black/40 border border-white/5 p-4 rounded-lg w-32">
-                                        <p className="text-[9px] text-gray-500 font-mono uppercase">Avg Run Time</p>
-                                        <p className="text-xl font-bold">1m 42s</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="absolute right-0 bottom-0 opacity-20 w-1/2 h-full bg-linear-to-t from-brand/20 to-transparent pointer-events-none" />
-                        </div>
-                    </>
-                )}
-
-                {projects?.length === 0 && (
+                {filteredProjects.length === 0 && !isLoading && (
                     <div className="col-span-full py-20 text-center border border-dashed border-white/10 rounded-2xl">
-                        <p className="text-gray-500">No projects found. Deploy your first one!</p>
+                        <p className="text-gray-500 font-mono">
+                            {searchTerm
+                                ? `No projects matching "${searchTerm}"`
+                                : "No projects found. Deploy your first one!"}
+                        </p>
                     </div>
                 )}
-
 
             </div>
         </div>

@@ -1,5 +1,4 @@
 "use client";
-import { useState } from 'react';
 import BuildInput from './build-input'
 import { FolderOpen, Info, Plus, Settings2, Trash2 } from 'lucide-react'
 import { Repo } from '@/hooks/use-projects';

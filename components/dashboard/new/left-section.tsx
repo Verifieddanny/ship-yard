@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import RepoItem from './repo-item'
 import OrgSelector from './organization-select'
 import { RefreshCw, Search } from 'lucide-react'
@@ -8,7 +8,7 @@ import RepoSkeleton from './repo-skeleton';
 
 function LeftSection({ selectedRepo, setSelectedRepo }: { selectedRepo: Repo | null; setSelectedRepo: (repo: Repo) => void }) {
     const [selectedOrg, setSelectedOrg] = useState<Oragnization | null>(null);
-    const { data: repos, isLoading, isFetching, refetch } = useRepos(selectedOrg?.login);
+    const { data: repos, isLoading } = useRepos(selectedOrg?.login);
     const [searchTerm, setSearchTerm] = useState<string>("");
 
     const filteredRepos = useMemo(() => {

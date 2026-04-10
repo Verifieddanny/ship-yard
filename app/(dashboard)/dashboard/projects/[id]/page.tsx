@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     GitBranch, Clock, ExternalLink, MoreHorizontal, Globe,
     Info
@@ -15,7 +15,21 @@ import DeploymentRow from '@/components/dashboard/project/deployment-row';
 import { statusColors } from '@/lib/status-color';
 import { Deployment, useProjects, useRollback } from '@/hooks/use-projects';
 import ProjectSettings from '@/components/dashboard/project/settings';
+import { useAuthStore } from '@/store/use-auth-store';
+import { socket } from '@/lib/socket';
+import { useQueryClient } from '@tanstack/react-query';
 
+interface buildUpdate {
+    projectId: number;
+    buildId: number;
+    status: "failed" | "running" | "passed";
+}
+interface deployUpdate {
+    projectId: number;
+    buildId: number;
+    status: string,
+    url: string,
+}
 export default function ProjectDetailPage() {
     const { id } = useParams();
     const [activeTab, setActiveTab] = useState('Builds');
@@ -23,6 +37,45 @@ export default function ProjectDetailPage() {
     const rollbackMutation = useRollback();
     const { data: projects, isLoading } = useProjects();
     const [newSecrets, setNewSecrets] = useState<{ key: string; value: string }[]>([]);
+
+    const { token } = useAuthStore();
+    const queryClient = useQueryClient();
+
+    useEffect(() => {
+        if (!token) return;
+
+        socket.on("buildStatusUpdate", (data: buildUpdate) => {
+            if (currentProject && data.projectId === currentProject.id) {
+                const updatedBuilds = (currentProject.builds || []).map(b =>
+                    b.id === data.buildId ? { ...b, status: data.status } : b
+                );
+                setCurrentProject({
+                    ...currentProject,
+                    builds: updatedBuilds
+                });
+                queryClient.invalidateQueries({ queryKey: ["projects"] });
+            }
+        });
+
+        socket.on("deploymentUpdate", (data: deployUpdate) => {
+            if (currentProject && data.projectId === currentProject.id) {
+                setCurrentProject({
+                    ...currentProject,
+                    productionUrl: data.url
+                });
+                queryClient.invalidateQueries({ queryKey: ["projects"] });
+            }
+        });
+
+        socket.on("connect_error", (err) => {
+            console.error("Socket Auth Failed:", err.message);
+        });
+
+        return () => {
+            socket.off("buildStatusUpdate");
+            socket.off("deploymentUpdate");
+        };
+    }, [token, currentProject?.id, queryClient, setCurrentProject]);
 
 
     useEffect(() => {
@@ -104,7 +157,10 @@ export default function ProjectDetailPage() {
                     <div className="flex items-center gap-3">
                         <h1 className="text-4xl font-bold tracking-tight">{currentProject.name}</h1>
                         <span className={`${statusColors[latestBuild?.status || 'queued']} text-[9px] font-mono px-2 py-0.5 rounded-full flex items-center gap-1.5`}>
-                            <span className={`w-1 h-1 rounded-full ${latestBuild?.status === 'passed' ? 'bg-emerald-400' : 'bg-current'}`} />
+                            <span className={`w-1 h-1 rounded-full ${latestBuild?.status === 'passed' ? 'bg-emerald-400' :
+                                    latestBuild?.status === 'failed' ? 'bg-red-400' :
+                                        'bg-blue-400 animate-pulse'
+                                }`} />
                             {latestBuild?.status?.toUpperCase() || 'IDLE'}
                         </span>
                     </div>
@@ -163,6 +219,7 @@ export default function ProjectDetailPage() {
                                         id={build.id.toString().substring(0, 7)}
                                         time={build.finishedAt ? formatDistanceToNow(new Date(build.finishedAt).toISOString()) : 'Active'}
                                         color={build.status === 'passed' ? 'text-emerald-400' : build.status === 'failed' ? 'text-red-400' : 'text-blue-400'}
+                                        buildId={build.id}
                                     />
                                 ))}
                             </div>

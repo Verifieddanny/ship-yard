@@ -1,20 +1,41 @@
+<p align="center">
+  <img src="public/favicon.ico" width="80" alt="Shipyard Logo" />
+</p>
+
 # Shipyard — Frontend
+
+[![Status](https://img.shields.io/badge/status-live-emerald)](http://useshipyard.xyz)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 The dashboard frontend for Shipyard, a CI/CD deployment pipeline. Built with Next.js 16, React 19, and Tailwind CSS v4.
 
+## Features
+
+- **GitHub OAuth** — Sign in with GitHub, token-based session with Zustand persistence
+- **Project Dashboard** — Grid/list view of all projects with build status badges, deployment info, and error previews
+- **New Project Flow** — Browse GitHub orgs and repos, search repos, configure build settings, add environment variables, deploy with one click
+- **Real-time Build Logs** — Terminal-style console streaming build output line by line via Socket.io as Docker containers run
+- **Project Management** — View build history, deployment history, update settings, manage secrets, delete projects (with GitHub webhook cleanup)
+- **Rebuild & Rollback** — Trigger rebuilds from the top bar, rollback to previous deployments from the deployments tab
+- **Profile Management** — Update username and email
+- **Logout** — Clear session and disconnect socket
+- **Responsive** — Mobile-friendly with collapsible sidebar
+
 ## Pages
 
-**Landing Page** — Developer-focused landing page with hero section, feature highlights, how-it-works steps, and CTA. Includes GitHub OAuth sign-in modal.
+**Landing Page** — Hero section, feature highlights, how-it-works steps, CTA with GitHub OAuth sign-in modal.
 
-**Dashboard** — Overview of all connected projects with build status badges, last deployment time, and quick actions. Empty state for new users.
+**Auth Callback** — Receives OAuth token and user data from backend redirect, stores in Zustand, redirects to dashboard.
 
-**New Project** — Split layout for connecting a GitHub repo. Left side: organization selector and repo browser with search. Right side: configuration form (branch, install command, build command, output directory, environment variables).
+**Dashboard** — Overview of all connected projects with build status, deployment timestamps, error previews. Grid and list view toggle. Empty state for new users.
 
-**Project Detail** — Individual project view with build history, deployment status, configuration settings, and rebuild option.
+**New Project** — Split layout. Left: organization selector (personal account + GitHub orgs), repo browser with search, 5 most recent repos. Right: auto-filled project config (name, branch, install command, build command, output directory), environment variables with add/remove. Deploy bar with loading state.
 
-**Deployment Detail** — Terminal-style build log viewer with real-time streaming via Socket.io. Build metadata (commit, branch, author, duration) and deployed URL link.
+**Project Detail** — Tabbed view with Builds (history with status, commit, timestamps), Deployments (live/rolled back status, rollback button), and Settings (update build config, manage secrets, danger zone with project deletion). Sidebar shows production URL, build time usage metrics, and notifications.
 
-**Settings** — User profile management (username, email).
+**Deployment Detail** — Build metadata (commit message, branch, hash, timestamp, author avatar). Health status with progress bar. Full-screen terminal console with real-time log streaming, auto-scroll, line numbers, color-coded log types, and clickable deployment URLs.
+
+**Profile** — View username and email.
 
 ## Tech Stack
 
@@ -22,7 +43,11 @@ The dashboard frontend for Shipyard, a CI/CD deployment pipeline. Built with Nex
 - **UI:** React 19
 - **Styling:** Tailwind CSS v4
 - **Icons:** Lucide React
-- **Real-time:** Socket.io Client (for build log streaming)
+- **State Management:** Zustand (auth + project state with persistence)
+- **Server State:** TanStack React Query (data fetching, mutations, cache invalidation)
+- **HTTP Client:** Axios (with JWT interceptor)
+- **Real-time:** Socket.io Client (build log streaming, build and deployment status update)
+- **Date Formatting:** date-fns
 
 ## Project Structure
 
@@ -30,54 +55,77 @@ The dashboard frontend for Shipyard, a CI/CD deployment pipeline. Built with Nex
 app/
 ├── (landing)/
 │   ├── layout.tsx               # Landing page layout with navbar + footer
-│   └── page.tsx                 # Landing page
+│   ├── page.tsx                 # Landing page
+│   └── auth/
+│       └── callback/
+│           └── page.tsx         # OAuth callback handler
 ├── (dashboard)/
 │   └── dashboard/
-│       ├── layout.tsx           # Dashboard layout with sidebar + top bar
+│       ├── layout.tsx           # Dashboard layout with sidebar + top bar + socket provider
 │       ├── page.tsx             # Projects overview
 │       ├── new/
 │       │   └── page.tsx         # New project setup
 │       ├── projects/
 │       │   └── [id]/
-│       │       └── page.tsx     # Project detail (builds, settings)
+│       │       └── page.tsx     # Project detail (builds, deployments, settings)
 │       ├── deployments/
 │       │   └── [id]/
-│       │       └── page.tsx     # Deployment detail (build logs)
-│       └── settings/
-│           └── page.tsx         # User profile settings
+│       │       └── page.tsx     # Build log terminal view
+│       └── profile/
+│           └── page.tsx         # User profile 
 
 components/
 ├── auth/
 │   └── auth-modal.tsx           # GitHub OAuth sign-in modal
 ├── landing/
-│   ├── hero.tsx                 # Hero section with code snippet
+│   ├── hero.tsx                 # Hero section
 │   ├── features.tsx             # Feature highlights grid
 │   ├── steps.tsx                # How it works steps
 │   └── cta.tsx                  # Call to action section
 ├── dashboard/
-│   ├── sidebar.tsx              # Navigation sidebar
+│   ├── sidebar.tsx              # Navigation sidebar with logout
 │   ├── sidebar-link.tsx         # Sidebar nav item
-│   ├── top-bar.tsx              # Search bar + user avatar
+│   ├── top-bar.tsx              # Search bar, new project button, rebuild, user avatar
 │   ├── footer.tsx               # Dashboard footer
+│   ├── dashboard-skeleton.tsx   # Loading skeleton
 │   ├── components/
-│   │   └── project-card.tsx     # Project card with status badge
+│   │   └── project-card.tsx     # Project card with status badge and error preview
 │   ├── new/
-│   │   ├── left-section.tsx     # Org selector + repo browser
-│   │   ├── right-section.tsx    # Configuration form
-│   │   ├── organization-select.tsx
-│   │   ├── repo-item.tsx
-│   │   ├── build-input.tsx
-│   │   └── deployment-bar.tsx
+│   │   ├── left-section.tsx     # Org selector + repo browser with search
+│   │   ├── right-section.tsx    # Configuration form + env variables
+│   │   ├── organization-select.tsx  # GitHub org/account dropdown
+│   │   ├── repo-item.tsx        # Repo list item
+│   │   ├── repo-skeleton.tsx    # Repo loading skeleton
+│   │   ├── build-input.tsx      # Build config input field
+│   │   └── deployment-bar.tsx   # Fixed deploy button bar
 │   ├── deployments/
-│   │   ├── terminal-console.tsx # Build log terminal viewer
-│   │   └── log-line.tsx         # Individual log line component
+│   │   ├── terminal-console.tsx # Real-time build log terminal (expandable)
+│   │   └── log-line.tsx         # Individual log line with type coloring and URL detection
 │   └── project/
-│       ├── build-row.tsx        # Build history row
+│       ├── build-row.tsx        # Build history row (clickable for running builds)
+│       ├── deployment-row.tsx   # Deployment row with rollback button
+│       ├── settings.tsx         # Project settings with secret management and danger zone
 │       ├── config-input.tsx     # Editable config field
 │       ├── notification-item.tsx
-│       └── usage-metric.tsx
+│       └── usage-metric.tsx     # Build time usage bar
 ├── navbar.tsx                   # Landing page navbar
 └── footer.tsx                   # Landing page footer
+
+hooks/
+└── use-projects.ts              # React Query hooks for all API operations
+
+lib/
+├── axios.ts                     # Axios instance with JWT interceptor
+├── socket.ts                    # Socket.io client with auth
+└── status-color.tsx             # Build status color mapping
+
+providers/
+├── query-provider.tsx           # TanStack React Query provider
+└── socket-provider.tsx          # Socket.io connection manager
+
+store/
+├── use-auth-store.ts            # Auth state (token, user) with persistence
+└── use-project-store.ts         # Project state, current project, build logs
 ```
 
 ## Setup

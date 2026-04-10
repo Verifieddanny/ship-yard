@@ -1,6 +1,7 @@
-import { Play, Save, Trash2, Loader2 } from "lucide-react"
-import { Project, useUpdateProject, useDeleteSecret } from "@/hooks/use-projects"
+import { Play, Save, Trash2, Loader2, AlertTriangle } from "lucide-react"
+import { Project, useUpdateProject, useDeleteSecret, useDeleteProject } from "@/hooks/use-projects"
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 function ProjectSettings({ currentProject, addSecretField, newSecrets, updateNewSecret, removeNewSecret, setNewSecrets }: {
     currentProject: Project, addSecretField: () => void, newSecrets: {
@@ -13,8 +14,13 @@ function ProjectSettings({ currentProject, addSecretField, newSecrets, updateNew
 
     const updateMutation = useUpdateProject();
     const deleteSecretMutation = useDeleteSecret();
+    const deleteProjectMutation = useDeleteProject();
+
+    const router = useRouter();
 
     const [formData, setFormData] = useState({
+        name: currentProject.name || '',
+        branch: currentProject.branch || '',
         buildCommand: currentProject.buildCommand || '',
         installCommand: currentProject.installCommand || '',
         outputDirectory: currentProject.outputDirectory || ''
@@ -23,6 +29,8 @@ function ProjectSettings({ currentProject, addSecretField, newSecrets, updateNew
     useEffect(() => {
         if (currentProject) {
             setFormData({
+                name: currentProject.name || '',
+                branch: currentProject.branch || '',
                 buildCommand: currentProject.buildCommand || '',
                 installCommand: currentProject.installCommand || '',
                 outputDirectory: currentProject.outputDirectory || ''
@@ -58,6 +66,21 @@ function ProjectSettings({ currentProject, addSecretField, newSecrets, updateNew
         }
     };
 
+    const handleDeleteProject = async () => {
+        const confirmName = confirm(
+            "Are you sure you want to delete this project? This will remove all builds, logs, and the GitHub webhook. This action is irreversible."
+        );
+
+        if (confirmName) {
+            try {
+                await deleteProjectMutation.mutateAsync(currentProject.id);
+                router.push("/dashboard");
+            } catch (err: any) {
+                alert(err.response?.data?.message || "Failed to delete project");
+            }
+        }
+    };
+
     return (
         <div className="bg-[#111] border border-white/5 rounded-2xl p-8 space-y-8 animate-in slide-in-from-top-1">
             <div className="space-y-2">
@@ -65,6 +88,26 @@ function ProjectSettings({ currentProject, addSecretField, newSecrets, updateNew
                 <p className="text-gray-500 text-sm">Update your environment and build triggers.</p>
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                    <label htmlFor="name" className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">BUILD COMMAND</label>
+                    <input
+                        id="name"
+                        className="w-full bg-black border border-white/10 rounded-lg px-4 py-2.5 text-sm font-mono text-gray-300 outline-none focus:border-brand/40"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    />
+                </div>
+                <div className="space-y-2">
+                    <label htmlFor="branch" className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">OUTPUT DIRECTORY</label>
+                    <input
+                        id="branch"
+                        className="w-full bg-black border border-white/10 rounded-lg px-4 py-2.5 text-sm font-mono text-gray-300 outline-none focus:border-brand/40"
+                        value={formData.branch}
+                        onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
+                    />
+                </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                     <label htmlFor="buildCommand" className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">BUILD COMMAND</label>
@@ -178,6 +221,32 @@ function ProjectSettings({ currentProject, addSecretField, newSecrets, updateNew
                         <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
                     ) : <Save size={14} />}
                     {updateMutation.isPending ? 'SAVING...' : 'SAVE CHANGES'}
+                </button>
+            </div>
+
+            {/* Danger Zone */}
+            <div className="bg-red-500/2 border border-red-500/10 rounded-2xl p-8 space-y-6">
+                <div className="flex items-center gap-3 text-red-400">
+                    <AlertTriangle size={20} />
+                    <h3 className="font-bold">Danger Zone</h3>
+                </div>
+                <p className="text-sm text-gray-500 leading-relaxed max-w-xl">
+                    Deleting your project is permanent and cannot be undone. All pipeline data, projects, and secrets will be lost forever.
+                </p>
+                <button
+                    type="button"
+                    disabled={deleteProjectMutation.isPending}
+                    onClick={handleDeleteProject}
+                    className="border border-red-500/20 text-red-500 font-bold px-6 py-2.5 rounded-lg hover:bg-red-500/10 transition-all cursor-pointer flex items-center gap-2"
+                >
+                    {deleteProjectMutation.isPending ? (
+                        <>
+                            <Loader2 size={16} className="animate-spin" />
+                            DELETING...
+                        </>
+                    ) : (
+                        "Delete Project"
+                    )}
                 </button>
             </div>
         </div>
