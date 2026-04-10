@@ -134,7 +134,13 @@ store/
 - Node.js 20+
 - Backend API running ([Shipyard Backend](https://github.com/Verifieddanny/cicd-engine))
 
-### Install and Run
+### Install and Run (with bun or npm)
+
+```bash
+bun install
+bun dev
+```
+or
 
 ```bash
 npm install
