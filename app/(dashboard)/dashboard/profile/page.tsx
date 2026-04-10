@@ -9,7 +9,7 @@ export default function SettingsPage() {
     return (
         <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
             <div>
-                <h1 className="text-4xl font-bold tracking-tight text-white">Account Settings</h1>
+                <h1 className="text-4xl font-bold tracking-tight text-white">Profile</h1>
                 <p className="text-gray-500 mt-2">Manage your personal information and developer profile.</p>
             </div>
 
@@ -32,14 +32,6 @@ export default function SettingsPage() {
 
                         <div className="space-y-1">
                             <h2 className="text-2xl font-bold text-white">{user?.username}</h2>
-                        </div>
-
-                        <div className="w-full pt-6 border-t border-white/5 space-y-4">
-                            <div className="flex justify-between text-[10px] font-mono uppercase tracking-widest">
-                                <span className="text-gray-500">Member Since</span>
-                                <span className="text-white">{format(parseISO(new Date(user?.createdAt || "").toISOString() ), 'MMM yyyy')}</span>
-                            </div>
-
                         </div>
                     </div>
                 </div>
