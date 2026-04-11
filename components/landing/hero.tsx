@@ -26,9 +26,9 @@ export default function Hero({ onOpenAuth }: HeroProps) {
             <button onClick={onOpenAuth} type='button' className="bg-linear-to-br from-[#89CEFF] to-[#0EA5E9] cursor-pointer hover:bg-sky-400 text-black font-bold py-4 px-8 rounded-md flex items-center gap-2 transition-colors duration-200">
               Get Started Free <ArrowRight size={20} />
             </button>
-            {/* <button type='button' className="bg-white/10 hover:bg-white/20 text-white font-semibold py-4 px-8 rounded-md transition-all border border-white/5">
+            <a href='https://mintlify.wiki/Verifieddanny/cicd-engine' rel="noopener noreferrer" target='_blank' type='button' className="bg-white/10 hover:bg-white/20 text-white font-semibold py-4 px-8 rounded-md transition-all border border-white/5">
               View Documentation
-            </button> */}
+            </a>
           </div>
         </div>
 
